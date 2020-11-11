@@ -54,6 +54,16 @@
     self.imageView.contentMode = UIViewContentModeScaleAspectFit;
     [self.view addSubview:self.imageView];
     
+    
+       NSArray *familyNames =[[NSArray alloc]initWithArray:[UIFont familyNames]];
+       for(NSInteger i = 0;i < familyNames.count;i++ ){
+           NSLog(@"Family name: %@", familyNames[i]);
+           NSArray  *fontNames =[[NSArray alloc] initWithArray:[UIFont fontNamesForFamilyName:familyNames[i]]];
+           
+           for(NSInteger m = 0; m <fontNames.count; m++ ) {
+               NSLog(@"Font name: %@",fontNames[m]);
+           }
+       }
 }
 
 - (void)addImage

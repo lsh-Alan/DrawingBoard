@@ -9,6 +9,8 @@
 
 @interface DBEditViewController ()<UITextViewDelegate>
 
+@property(nonatomic, assign) CGFloat maxHeight;
+
 @end
 
 @implementation DBEditViewController
@@ -17,19 +19,24 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    self.view.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.7];
+    UIVisualEffectView *blurView = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleDark]];
+    blurView.layer.cornerRadius = 10;
+    blurView.layer.masksToBounds = YES;
+    blurView.frame = self.view.bounds;
+    [self.view addSubview:blurView];
+
+    self.maxHeight = self.view.bounds.size.height;
     
     if (!self.textView) {
         CGFloat width = self.view.bounds.size.width;
         self.textView = [[DrawingBoardTextView alloc] initWithFrame:CGRectMake(15, 200, width - 30, 40)];
+        self.textView.spellCheckingType = UITextSpellCheckingTypeNo;
         self.textView.backgroundColor = [UIColor clearColor];
-        self.textView.backgroundColor = [UIColor whiteColor];
-        self.textView.delegate = self;
         self.textView.showsVerticalScrollIndicator = NO;
         self.textView.showsHorizontalScrollIndicator = NO;
-        self.textView.tintColor = [UIColor blackColor];
+        self.textView.tintColor = [UIColor whiteColor];
         self.textView.returnKeyType = UIReturnKeyDone;
-        
+        self.textView.delegate = self;
         
         
         //字体阴影
@@ -46,12 +53,26 @@
         NSShadow *shadow = [[NSShadow alloc] init];
         shadow.shadowBlurRadius = 20.0;
         shadow.shadowOffset = CGSizeMake(0, 0);
-        shadow.shadowColor = [UIColor whiteColor];
-        self.textView.attributedText = [[NSMutableAttributedString alloc] initWithString:@"这是文本" attributes:@{NSFontAttributeName:[UIFont fontWithName:@"Thonburi-Bold" size:30]}];////,NSShadowAttributeName:shadow
+        shadow.shadowColor = [UIColor whiteColor];//PingFang sc  Regular常规   Medium中等。  Bold加粗   Heavy 特粗   //Thonburi-Bold  //HuaWenSongTi-1
+        self.textView.attributedText = [[NSMutableAttributedString alloc] initWithString:@"这是文本" attributes:@{NSFontAttributeName:[UIFont fontWithName:@"STSong" size:30],NSForegroundColorAttributeName:[UIColor whiteColor]}];////,NSShadowAttributeName:shadow //NSBackgroundColorAttributeName字体背景
     }
     
-    
+    self.textView.delegate = self;
     [self.view addSubview:self.textView];
+
+    //检测键盘高度
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardAction:) name:UIKeyboardDidShowNotification object:nil];
+}
+
+- (void)keyboardAction:(NSNotification *)notif
+{
+    // 通过通知对象获取键盘frame: [value CGRectValue]
+    NSDictionary *useInfo = [notif userInfo];
+    NSValue *value = [useInfo objectForKey:UIKeyboardFrameEndUserInfoKey];
+    // <注意>具有约束的控件通过改变约束值进行frame的改变处理
+    self.maxHeight = self.view.bounds.size.height -[value CGRectValue].size.height;
+    
+    self.textView.center = CGPointMake(self.view.bounds.size.width/2.0, self.maxHeight/2.0) ;
 }
 
 - (void)doneback
@@ -69,7 +90,6 @@
         rect.size.width = width - 30;
         self.textView.frame = rect;
     }
-    
     
     if (image) {
         !self.doneBlock ? : self.doneBlock(image,self.textView);
@@ -89,7 +109,7 @@
     }
     
     if (range.length == 0) {//增加
-        if (textView.bounds.size.height >= 400) {
+        if (textView.bounds.size.height >= self.maxHeight) {
             return NO;
         }
     }
@@ -106,10 +126,11 @@
         self.textView.frame = rect;
     }
     
-    if (textView.bounds.size.height >= 400) {
-        [textView resignFirstResponder];
-    }
+    textView.center = CGPointMake(self.view.bounds.size.width/2.0, self.maxHeight/2.0) ;
     
+//    if (textView.bounds.size.height >= self.maxHeight) {
+//        //[textView resignFirstResponder];
+//    }
 }
 
 + (UIImage *)captureView:(UIView *)view
@@ -118,17 +139,33 @@
     if ([view isKindOfClass:[UIScrollView class]]) {
         size = ((UIScrollView *)view).contentSize;
     }
-    UIGraphicsBeginImageContextWithOptions(size, YES, 0.0);
+    view.layer.backgroundColor = [UIColor clearColor].CGColor;
+    UIGraphicsBeginImageContextWithOptions(size, NO, 0.0);
     [[view layer] renderInContext:UIGraphicsGetCurrentContext()];
     UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     return image;
 }
 
-- (void)viewDidAppear:(BOOL)animated
+- (void)viewWillAppear:(BOOL)animated
 {
-    [super viewDidAppear:animated];
+    [super viewWillAppear:animated];
     [self.textView becomeFirstResponder];
+    
+    
+    [self.textView sizeToFit];
+    CGFloat width = self.view.bounds.size.width;
+    if (self.textView.bounds.size.width < width - 30) {
+        CGRect rect = self.textView.frame;
+        rect.size.width = width - 30;
+        self.textView.frame = rect;
+    }
+    
+    self.textView.center = CGPointMake(self.view.bounds.size.width/2.0, self.maxHeight/2.0) ;
+    
+    
 }
+
+
 
 @end

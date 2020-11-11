@@ -7,6 +7,8 @@
 
 #import "DrawingBoard.h"
 #import "UIImage+Watermark.h"
+#import "DBEditViewController.h"
+#import "UIViewController+Utils.h"
 @interface DrawingBoard ()<UIGestureRecognizerDelegate>
 
 @property(nonatomic, strong) DrawingBoardImageView *backGroundImageView;
@@ -25,6 +27,8 @@
 @property(nonatomic, strong) UIPanGestureRecognizer *pan;
 
 @end
+
+#define defaultSubViewWidth   100.0   //宽高相等
 
 @implementation DrawingBoard
 
@@ -90,21 +94,19 @@
         
         DrawingBoardImageView *imageView = [[DrawingBoardImageView alloc] initWithFrame:CGRectZero];
         imageView.layer.borderColor = [UIColor redColor].CGColor;
-        CGFloat defaultWidth  = 100.0; //宽高相等
         
         CGSize imageSize = image.size;
         if (imageSize.width/imageSize.height >= 1) {
             //宽最大 并固定
-            CGFloat scale = imageSize.width/defaultWidth;
+            CGFloat scale = imageSize.width/defaultSubViewWidth;
             CGFloat height = imageSize.height/scale;
-            imageView.bounds = CGRectMake(0, 0, defaultWidth, height);
+            imageView.bounds = CGRectMake(0, 0, defaultSubViewWidth, height);
             
         }else{//高最大 并固定
-            CGFloat scale = imageSize.height/defaultWidth;
+            CGFloat scale = imageSize.height/defaultSubViewWidth;
             CGFloat width = imageSize.width/scale;
-            imageView.bounds = CGRectMake(0, 0, width, defaultWidth);
+            imageView.bounds = CGRectMake(0, 0, width, defaultSubViewWidth);
         }
-        
         
         if (textView) {
             imageView.textView = textView;
@@ -157,7 +159,30 @@
 /// 去编辑文本
 - (void)goEdit:(DrawingBoardImageView *)drawingBoardImageView
 {
-    
+    UIViewController *currentVC = [UIViewController currentViewController];
+    DBEditViewController *editVC = [[DBEditViewController alloc] init];
+    editVC.textView = drawingBoardImageView.textView;
+    __weak DrawingBoardImageView *weakDrawingBoardImageView = drawingBoardImageView;
+    editVC.doneBlock = ^(UIImage * _Nonnull image, DrawingBoardTextView * _Nonnull textView) {
+        
+        CGSize imageSize = image.size;
+        if (imageSize.width/imageSize.height >= 1) {
+            //宽最大 并固定
+            CGFloat scale = imageSize.width/defaultSubViewWidth;
+            CGFloat height = imageSize.height/scale;
+            weakDrawingBoardImageView.bounds = CGRectMake(0, 0, defaultSubViewWidth, height);
+            
+        }else{//高最大 并固定
+            CGFloat scale = imageSize.height/defaultSubViewWidth;
+            CGFloat width = imageSize.width/scale;
+            weakDrawingBoardImageView.bounds = CGRectMake(0, 0, width, defaultSubViewWidth);
+        }
+        
+        weakDrawingBoardImageView.image = image;
+    };
+    currentVC.definesPresentationContext = YES;
+    editVC.modalPresentationStyle = UIModalPresentationOverFullScreen;
+    [currentVC presentViewController:editVC animated:YES completion:nil];
 }
 
 /// 只管理旋转与捏合 拖动 设置了delegate
@@ -185,11 +210,17 @@
 - (void)tap:(UITapGestureRecognizer *)tap
 {
     DrawingBoardImageView *view = (DrawingBoardImageView *)tap.view;
-    if (view == self.currentSelector) {
-        if (self.currentSelector.textView) {
+    
+    //双击进入可编辑
+    if (view.textView) {
+        if ([view doubleTouch]) {
             ///进入文字编辑  ToDo
             [self goEdit:self.currentSelector];
         }
+    }
+    
+    if (view == self.currentSelector) {
+        
     }else{
         [self setFirstRegist:view];
     }
@@ -235,16 +266,15 @@
         DrawingBoardImageView *imageView = self.subDrawingBoardImageViews[i];
         CGAffineTransform _trans = imageView.transform;
         CGFloat rotate = acosf(_trans.a);
-        // 旋转180度后，需要处理弧度的变化
+        // 旋转360度后，需要处理弧度的变化
         if (_trans.b < 0) {
-            rotate = M_PI -rotate;
+            rotate = M_PI * 2 -rotate;
         }
         // 将弧度转换为角度
-        CGFloat degree = rotate/M_PI * 180;
+        CGFloat degree = rotate/(M_PI * 2) * 360;
         
         /// 图片对应的大小 和 屏幕显示的尺寸 和 绘图是尺寸与当前机器放缩因子的关系
-        orinialImage = [orinialImage addWaterImage:imageView.image waterImageRect:CGRectMake(0, 0, imageView.bounds.size.width * scale/screenScale, imageView.bounds.size.height * scale/screenScale) OriginalPoint:CGPointMake(imageView.frame.origin.x * scale, imageView.frame.origin.y * scale) Rotate:degree];
-        
+        orinialImage = [orinialImage addWaterImage:imageView.image waterImageRect:CGRectMake(0, 0, imageView.bounds.size.width * scale/screenScale, imageView.bounds.size.height * scale/screenScale) OriginalPoint:CGPointMake(imageView.frame.origin.x * scale, imageView.frame.origin.y * scale) Rotate:degree];        
     }
     
     return orinialImage;
