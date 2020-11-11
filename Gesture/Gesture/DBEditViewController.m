@@ -72,6 +72,9 @@
     // <注意>具有约束的控件通过改变约束值进行frame的改变处理
     self.maxHeight = self.view.bounds.size.height -[value CGRectValue].size.height;
     
+    //留部分头部空间
+    self.maxHeight -= 44;
+    
     self.textView.center = CGPointMake(self.view.bounds.size.width/2.0, self.maxHeight/2.0) ;
 }
 
